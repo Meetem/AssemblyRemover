@@ -5,6 +5,7 @@ using System.IO;
 using System.Reflection;
 using dnlib.DotNet.MD;
 using dnlib.IO;
+using System.Linq;
 
 namespace AssemblyRemover
 {
@@ -41,12 +42,25 @@ namespace AssemblyRemover
         {
             if(args.Length < 2)
             {
-                Console.WriteLine($"Usage: AssemblyRemover.exe [path] [id] (output_path)\nRemoves AssemblyRef by id");
+                Console.WriteLine($"Usage: AssemblyRemover.exe [path] [id] (output_path) (other args)\nRemoves AssemblyRef by id\n\n" +
+                    $"Other args:\n" +
+                    $"--write count | Used for writing modified count of AssemblyRef rows\n" +
+                    $"--dup-from=X | Used for duplicating assembly ref from other id (first is 1), use 0 to fill with null");
                 return 0;
             }
 
             var path = args[0];
             var outputPath = args.Length >= 3 ? args[2] : path;
+            var shouldWriteCount = args.Any(x => x.Equals("--write-count", StringComparison.OrdinalIgnoreCase));
+            var dupFrom = 1;
+
+            foreach(var a in args)
+            {
+                if(a.StartsWith("--dup-from=", StringComparison.OrdinalIgnoreCase))
+                {
+                    dupFrom = Convert.ToInt32(a.Substring("--dup-from=".Length));
+                }
+            }
 
             var file = File.ReadAllBytes(path);
             using var dataStream = new MemoryStream(file, 0, file.Length, true, true);
@@ -107,16 +121,21 @@ namespace AssemblyRemover
                 offs += rowSize;
             }     
             
-            ((Span<byte>)rows).Slice(0, rowSize).CopyTo(
-                new Span<byte>(rows, offs, rowSize)
-            );
+            if(dupFrom > 0)
+            {
+                ((Span<byte>)rows).Slice((dupFrom - 1) * rowSize, rowSize).CopyTo(
+                    new Span<byte>(rows, offs, rowSize)
+                );
+            }
 
             //Copy data back
             ((Span<byte>)rows).CopyTo(data);
             
             //Modify rows count in file.
             dataStream.Position = numAssemblyRefsOffset;
-            //writer.Write((int)(rowCount - 1));
+            
+            if(shouldWriteCount)
+                writer.Write((int)(rowCount - 1));
             
             Console.WriteLine($"Writing to {outputPath}");
             File.WriteAllBytes(outputPath, file);
