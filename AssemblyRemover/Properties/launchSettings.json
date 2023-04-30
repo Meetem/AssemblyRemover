@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "AssemblyRemover": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Users\\alex\\Documents\\GitHub\\Other\\Starxel\\Assets\\Plugins\\PointerLibStandard.dll.old\" 3 \"C:\\Users\\alex\\Documents\\GitHub\\Other\\Starxel\\Assets\\Plugins\\PointerLibStandard.dll\""
+    }
+  }
+}
